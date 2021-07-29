@@ -24,7 +24,6 @@ func _ready() -> void:
 	var material = ShaderMaterial.new()
 	material.shader = CLIP_SHADER
 	_teleport_clone.material = material
-	set_collision_layer_bit(19, true)
 
 func _to_string() -> String:
 	return "[%s:%s]" % [get_class(), get_instance_id()];
@@ -57,9 +56,11 @@ func _portal_system_entered() -> void:
 	_teleport_clone.texture = _get_clone_texture()
 	_teleport_clone.set_as_toplevel(true)
 	add_child(_teleport_clone)
+	set_collision_layer_bit(19, true)
 
 func _portal_system_exited() -> void:
 	remove_child(_teleport_clone)
+	set_collision_layer_bit(19, false)
 
 func _get_clone_texture() -> Texture:
 	return null

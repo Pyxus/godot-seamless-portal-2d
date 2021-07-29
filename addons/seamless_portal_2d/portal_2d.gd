@@ -26,9 +26,8 @@ var _traveler_system: Array
 var _cullred_bodies: Array
 var _virtual_by_real_body: Dictionary
 
-onready var _virtual_collision_area: Area2D = Area2D.new()
-onready var _collision_cull_area: Area2D = Area2D.new()
-onready var _traveler_detection_area: Area2D = Area2D.new()
+onready var _virtual_collision_area = Area2D.new()
+onready var _collision_cull_area = Area2D.new()
 onready var _passage_area: Area2D = Area2D.new()
 onready var _passage_collision_shape: CollisionShape2D = _get_passage_collision_shape()
 onready var _top_boundary: StaticBody2D = StaticBody2D.new()
@@ -40,14 +39,12 @@ func _ready() -> void:
 	_collision_cull_area.connect("body_exited", self, "_on_CollisionCullArea_body_exited")
 	_passage_area.connect("body_entered", self, "_on_PassageArea_body_entered")
 	_passage_area.connect("body_exited", self, "_on_PassageArea_body_exited")
-	_traveler_detection_area.connect("body_entered", self, "_on_TravelerDetectionArea_body_entered")
-	_traveler_detection_area.connect("body_exited", self, "_on_TravelerDetectionArea_body_exited")
-	#_virtual_collision_area.connect("body_entered", self, "_on_VirtualCollisionArea_body_entered")
-	#_virtual_collision_area.connect("body_exited", self, "_on_VirtualCollisionArea_body_exited")
+	_virtual_collision_area.connect("body_entered", self, "_on_VirtualCollisionArea_body_entered")
+	_virtual_collision_area.connect("body_exited", self, "_on_VirtualCollisionArea_body_exited")
 
 	var collision_shape: CollisionShape2D
 
-	for node in [_passage_area, _top_boundary, _bottom_boundary, _traveler_detection_area]:
+	for node in [_passage_area, _top_boundary, _bottom_boundary]:
 		collision_shape = CollisionShape2D.new()
 		collision_shape.shape = RectangleShape2D.new()
 		node.add_child(collision_shape)
@@ -65,7 +62,7 @@ func _ready() -> void:
 
 	_adjust_collision_shapes()
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if enabled:
 		for node in _tracked_travelers:
 			var traveler := node as PhysicsBody2D
@@ -80,6 +77,9 @@ func _process(delta: float) -> void:
 				traveler._traversing_portal(linked_portal, self, linked_portal._calc_teleport(traveler))
 				_traveler_exited_portal(traveler, true)
 				linked_portal._traveler_entered_portal(traveler, true)
+
+				if _virtual_by_real_body.has(traveler):
+					_virtual_by_real_body[traveler].get_parent().remove_child(_virtual_by_real_body[traveler])
 
 func _to_string() -> String:
 	return "[%s:%s]" % [get_class(), get_instance_id()];
@@ -165,7 +165,6 @@ func _calc_teleport(body: PhysicsBody2D) -> Transform2D:
 	var teleport_transform: Transform2D = linked_portal_transform * flip_transform * global_transform.inverse() * body.global_transform
 	teleport_transform.origin += linked_portal_passage_normal * TELEPORT_BUFFER
 	return teleport_transform
-	#return Transform2D(linked_portal.get_teleport_rotation(), teleport_transform.origin)
 
 func _is_in_either_portal(traveler: Node) -> bool:
 	return _tracked_travelers.has(traveler) or linked_portal._tracked_travelers.has(traveler)
@@ -186,11 +185,8 @@ func _adjust_collision_shapes() -> void:
 	if is_inside_tree():
 		var border_extents = get_border_extents()
 		var passage_height = border_extents.y - CORNER_BOUNDARY_HEIGHT * 2 - 2
-		#_traveler_detection_area.get_child(0).shape.extents = Vector2(border_extents.x / 2, passage_height)
-		_traveler_detection_area.get_child(0).shape.extents = Vector2(border_extents.x * 2, passage_height)
-		_traveler_detection_area.position = border_extents * 2 * PASSAGE_NORMAL
-		_passage_area.get_child(0).shape.extents = Vector2(border_extents.x * 2, passage_height)
-		_passage_area.position = border_extents * PASSAGE_NORMAL
+		_passage_area.get_child(0).shape.extents = Vector2(border_extents.x, passage_height)
+		_passage_area.position = border_extents * PASSAGE_NORMAL * 2
 		_top_boundary.get_child(0).shape.extents = Vector2(border_extents.x, CORNER_BOUNDARY_HEIGHT)
 		_top_boundary.position = Vector2(0, border_extents.y - CORNER_BOUNDARY_HEIGHT)
 		_bottom_boundary.get_child(0).shape.extents = Vector2(border_extents.x, CORNER_BOUNDARY_HEIGHT)
@@ -216,12 +212,6 @@ func _on_PassageArea_body_entered(body: Node) -> void:
 func _on_PassageArea_body_exited(body: Node) -> void:
 	_traveler_exited_portal(body)
 
-func _on_TravelerDetectionArea_body_entered(body: Node) -> void:
-	pass
-
-func _on_TravelerDetectionArea_body_exited(body: Node) -> void:
-	pass
-
 func _on_CollisionCullArea_body_entered(body: Node) -> void:
 	if not _tracked_travelers.has(body) and not _cullred_bodies.has(body) and not body in [_top_boundary, _bottom_boundary]:
 		_cullred_bodies.append(body)
@@ -237,9 +227,14 @@ func _on_CollisionCullArea_body_exited(body: Node) -> void:
 			traveler.remove_collision_exception_with(body)
 
 func _on_VirtualCollisionArea_body_entered(body: Node) -> void:
-	if body is PhysicsBody2D and not _is_virtual_body(body):
+	if body is PhysicsBody2D and not _is_virtual_body(body) and not body in [self, _top_boundary, _bottom_boundary]:
 		if body is KinematicBody2D:
 			var virtual_body := VirtualKinematicBody2D.new()
+			linked_portal.add_child(virtual_body)
+			virtual_body.initialize(body, _calc_teleport(body))
+			_virtual_by_real_body[body] = virtual_body
+		elif body is StaticBody2D:
+			var virtual_body := VirtualStaticBody2D.new()
 			linked_portal.add_child(virtual_body)
 			virtual_body.initialize(body, _calc_teleport(body))
 			_virtual_by_real_body[body] = virtual_body
