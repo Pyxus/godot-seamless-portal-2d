@@ -18,25 +18,23 @@ var real_body: StaticBody2D
 #onready variables
 
 
-#optional built-in virtual _init method
-
-#built-in virtual _ready method
-
-#remaining built-in virtual methods
-
-func initialize(body: StaticBody2D, starting_transform: Transform2D) -> void:
+func _init(body: StaticBody2D) -> void:
 	real_body = body
-	global_transform = starting_transform
-
 	collision_layer = 0
 	collision_mask = 1 << 19
 
 	for node in real_body.get_children():
 		if node is CollisionShape2D:
 			var collision_shape := CollisionShape2D.new()
-			collision_shape.shape = node.shape.duplicate()
 			collision_shape.position = node.position
-			call_deferred("add_child", collision_shape)
+			collision_shape.set_deferred("shape", node.shape)
+			add_child(collision_shape)
+
+#built-in virtual _ready method
+
+#remaining built-in virtual methods
+
+#public method
 
 #private methods
 

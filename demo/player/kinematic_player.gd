@@ -1,4 +1,4 @@
-extends "res://addons/seamless_portal_2d/kinematic_traveler_2d.gd"
+extends "res://addons/seamless_portal_2d/traveler/kinematic_traveler_2d.gd"
 ## docstring
 
 #signals

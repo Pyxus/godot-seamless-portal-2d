@@ -8,21 +8,15 @@
 
 config_version=4
 
-_global_script_classes=[ {
-"base": "StaticBody2D",
-"class": "Portal2D",
-"language": "GDScript",
-"path": "res://addons/seamless_portal_2d/portal_2d.gd"
-} ]
-_global_script_class_icons={
-"Portal2D": ""
-}
-
 [application]
 
 config/name="Seamless Portal 2d"
 run/main_scene="res://demo/demo_scene.tscn"
 config/icon="res://icon.png"
+
+[editor_plugins]
+
+enabled=PoolStringArray( "res://addons/seamless_portal_2d/plugin.cfg" )
 
 [physics]
 

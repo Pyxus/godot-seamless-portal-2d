@@ -15,7 +15,6 @@ scale = Vector2( 0.18242, 1.97656 )
 texture = ExtResource( 1 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-visible = false
 shape = SubResource( 1 )
 
 [node name="PassageNormalCast" type="RayCast2D" parent="."]

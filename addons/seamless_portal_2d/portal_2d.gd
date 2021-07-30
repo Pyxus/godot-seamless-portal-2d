@@ -1,4 +1,4 @@
-class_name Portal2D
+tool
 extends StaticBody2D
 ## docstring
 
@@ -9,17 +9,18 @@ extends StaticBody2D
 const CORNER_BOUNDARY_HEIGHT = 2.0
 const PASSAGE_BOUNDARY_WIDTH_SHRINK = .5
 const TELEPORT_BUFFER = 10
-const PASSAGE_NORMAL = Vector2.LEFT
+const PASSAGE_NORMAL = Vector2.LEFT # Do not change, this could be made adjustable but at this moment many calculations assume the passage normal is left
 
-const KinematicTraveler = preload("res://addons/seamless_portal_2d/kinematic_traveler_2d.gd")
-const RigidTraveler = preload("res://addons/seamless_portal_2d/rigid_traveler_2d.gd")
-const VirtualKinematicBody2D = preload("res://addons/seamless_portal_2d/virtual_kinematic_body_2d.gd")
-const VirtualStaticBody2D = preload("res://addons/seamless_portal_2d/virtual_static_body_2d.gd")
-const VirtualRigidBody2D = preload("res://addons/seamless_portal_2d/virtual_rigid_body_2d.gd")
+var Portal2D = get_script() # I hate this
+const KinematicTraveler = preload("traveler/kinematic_traveler_2d.gd")
+const RigidTraveler = preload("traveler/rigid_traveler_2d.gd")
+const VirtualKinematicBody2D = preload("virtual_body/virtual_kinematic_body_2d.gd")
+const VirtualStaticBody2D = preload("virtual_body/virtual_static_body_2d.gd")
+const VirtualRigidBody2D = preload("virtual_body/virtual_rigid_body_2d.gd")
 
 export var enabled: bool = true
 
-var linked_portal: Portal2D setget link
+var linked_portal: StaticBody2D setget link
 
 var _tracked_travelers: Array
 var _traveler_system: Array
@@ -35,6 +36,8 @@ onready var _bottom_boundary: StaticBody2D = StaticBody2D.new()
 
 
 func _ready() -> void:
+	if Engine.editor_hint: return
+
 	_collision_cull_area.connect("body_entered", self, "_on_CollisionCullArea_body_entered")
 	_collision_cull_area.connect("body_exited", self, "_on_CollisionCullArea_body_exited")
 	_passage_area.connect("body_entered", self, "_on_PassageArea_body_entered")
@@ -53,6 +56,7 @@ func _ready() -> void:
 	collision_shape = CollisionShape2D.new()
 	collision_shape.shape = ConvexPolygonShape2D.new()
 	_collision_cull_area.add_child(collision_shape)
+	_collision_cull_area.set_collision_layer_bit(19, true)
 	add_child(_collision_cull_area)
 
 	collision_shape = CollisionShape2D.new()
@@ -63,11 +67,15 @@ func _ready() -> void:
 	_adjust_collision_shapes()
 
 func _physics_process(delta: float) -> void:
+	if Engine.editor_hint:
+		update_configuration_warning()
+		return
+
 	if enabled:
 		for node in _tracked_travelers:
 			var traveler := node as PhysicsBody2D
 			var teleport_to_transform := _calc_teleport(traveler)
-			var facing_direction := Vector2.LEFT.rotated(rotation)
+			var facing_direction := PASSAGE_NORMAL.rotated(rotation)
 			var direction_to_traveler := global_position.direction_to(traveler.global_position)
 			var has_traveler_crossed_passage := facing_direction.dot(direction_to_traveler) < 0
 			traveler._traversing_portal(self, linked_portal, _calc_teleport(traveler))
@@ -81,17 +89,40 @@ func _physics_process(delta: float) -> void:
 				if _virtual_by_real_body.has(traveler):
 					_virtual_by_real_body[traveler].get_parent().remove_child(_virtual_by_real_body[traveler])
 
+func _get_configuration_warning() -> String:
+	var collision_shape_count := 0
+
+	for node in get_children():
+		if node is CollisionShape2D or node is CollisionPolygon2D:
+			collision_shape_count += 1
+
+	if collision_shape_count > 1:
+		return "Portal is intended to work with 1 collision shape only"
+
+	var passage_collision_shape := _get_passage_collision_shape()
+	if passage_collision_shape != null:
+		var shape: Shape2D = passage_collision_shape.shape
+		if not shape is RectangleShape2D:
+			return "Portal CollisionShape2D is expected to use a RectangleShaped2D shape"
+	else:
+		return "Portal is expected to have 1 CollisionShape2D that uses a RectangleShape2D shape"
+
+	return ""
+
 func _to_string() -> String:
 	return "[%s:%s]" % [get_class(), get_instance_id()];
 
-func link(portal: Portal2D):
-	if portal != self:
-		linked_portal = portal;
-		linked_portal._traveler_system = _traveler_system
-		if portal != null and portal.linked_portal != self:
-			portal.linked_portal = self;
+func link(portal: StaticBody2D):
+	if portal is Portal2D:
+		if portal != self:
+			linked_portal = portal;
+			linked_portal._traveler_system = _traveler_system
+			if portal != null and portal.linked_portal != self:
+				portal.linked_portal = self;
+		else:
+			push_error("Can not link portal to self");
 	else:
-		push_error("Can not link portal to self");
+		push_error("Argument must be Portal2D. You'd have gotten a compile time error if static typing was better")
 
 func can_use_portal() -> bool:
 	return enabled and linked_portal != null
@@ -110,8 +141,8 @@ func get_teleport_rotation() -> float:
 
 	return deg2rad(rot - 180 if is_flipped else rot)
 
-func get_border_extents() -> Vector2:
-	return _passage_collision_shape.shape.extents
+func get_passage_extents() -> Vector2:
+	return _passage_collision_shape.shape.extents if _passage_collision_shape != null else Vector2.ZERO
 
 func get_passage_normal() -> Vector2:
 	return PASSAGE_NORMAL.rotated(rotation)
@@ -183,23 +214,23 @@ func _get_passage_collision_shape() -> CollisionShape2D:
 
 func _adjust_collision_shapes() -> void:
 	if is_inside_tree():
-		var border_extents = get_border_extents()
+		var border_extents = get_passage_extents()
 		var passage_height = border_extents.y - CORNER_BOUNDARY_HEIGHT * 2 - 2
-		_passage_area.get_child(0).shape.extents = Vector2(border_extents.x, passage_height)
+		_passage_area.get_child(0).shape.extents = Vector2(border_extents.x, passage_height - 2)
 		_passage_area.position = border_extents * PASSAGE_NORMAL * 2
 		_top_boundary.get_child(0).shape.extents = Vector2(border_extents.x, CORNER_BOUNDARY_HEIGHT)
 		_top_boundary.position = Vector2(0, border_extents.y - CORNER_BOUNDARY_HEIGHT)
 		_bottom_boundary.get_child(0).shape.extents = Vector2(border_extents.x, CORNER_BOUNDARY_HEIGHT)
 		_bottom_boundary.position = Vector2(0, -border_extents.y + CORNER_BOUNDARY_HEIGHT)
 		_virtual_collision_area.get_child(0).shape.set_point_cloud([
-			_top_boundary.position + Vector2(border_extents.x, 0),
-			_bottom_boundary.position + Vector2(border_extents.x, 0),
+			_top_boundary.position + Vector2(-border_extents.x, 0),
+			_bottom_boundary.position + Vector2(-border_extents.x, 0),
 			-_top_boundary.position.rotated(deg2rad(-45)) * 10,
 			-_bottom_boundary.position.rotated(deg2rad(45)) * 10,
 		])
 		_collision_cull_area.get_child(0).shape.set_point_cloud([
-			_top_boundary.position + Vector2(-border_extents.x, 0),
-			_bottom_boundary.position + Vector2(-border_extents.x, 0),
+			_top_boundary.position + Vector2(border_extents.x, 0),
+			_bottom_boundary.position + Vector2(border_extents.x, 0),
 			-_top_boundary.position.rotated(deg2rad(45)) * 10,
 			-_bottom_boundary.position.rotated(deg2rad(-45)) * 10,
 			#-_top_boundary.position.rotated(deg2rad(5)) * 30,
@@ -227,17 +258,29 @@ func _on_CollisionCullArea_body_exited(body: Node) -> void:
 			traveler.remove_collision_exception_with(body)
 
 func _on_VirtualCollisionArea_body_entered(body: Node) -> void:
-	if body is PhysicsBody2D and not _is_virtual_body(body) and not body in [self, _top_boundary, _bottom_boundary]:
-		if body is KinematicBody2D:
-			var virtual_body := VirtualKinematicBody2D.new()
+	var portal_exclusion := [self, _top_boundary, _bottom_boundary, linked_portal, linked_portal._top_boundary, linked_portal._bottom_boundary]
+	if body is PhysicsBody2D and not _is_virtual_body(body) and not body in portal_exclusion:
+		if body is StaticBody2D:
+			var virtual_body := VirtualStaticBody2D.new(body)
 			linked_portal.add_child(virtual_body)
-			virtual_body.initialize(body, _calc_teleport(body))
+			virtual_body.global_transform = _calc_teleport(body)
 			_virtual_by_real_body[body] = virtual_body
-		elif body is StaticBody2D:
-			var virtual_body := VirtualStaticBody2D.new()
+		# Disabled until better solution can be found
+
+		elif body is KinematicBody2D:
+			var virtual_body := VirtualKinematicBody2D.new(body)
 			linked_portal.add_child(virtual_body)
-			virtual_body.initialize(body, _calc_teleport(body))
+			virtual_body.global_transform = _calc_teleport(body)
 			_virtual_by_real_body[body] = virtual_body
+			pass
+
+		elif body is RigidBody2D:
+			var virtual_body := VirtualRigidBody2D.new(body)
+			linked_portal.add_child(virtual_body)
+			virtual_body.global_transform = _calc_teleport(body)
+			_virtual_by_real_body[body] = virtual_body
+			pass
+
 
 func _on_VirtualCollisionArea_body_exited(body: Node) -> void:
 	if body is PhysicsBody2D and not _is_virtual_body(body) and _virtual_by_real_body.has(body):

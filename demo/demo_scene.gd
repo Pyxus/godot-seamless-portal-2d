@@ -25,7 +25,7 @@ func _ready() -> void:
 	pass
 
 func _physics_process(_delta: float) -> void:
-	get_node("KinematicBody2D").move_and_slide(Vector2.LEFT * 10)
+
 	pass
 
 #public methods
