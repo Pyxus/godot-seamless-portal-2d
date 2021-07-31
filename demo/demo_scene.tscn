@@ -1,63 +1,37 @@
-[gd_scene load_steps=7 format=2]
+[gd_scene load_steps=6 format=2]
 
 [ext_resource path="res://demo/portal_2d.tscn" type="PackedScene" id=1]
 [ext_resource path="res://icon.png" type="Texture" id=2]
 [ext_resource path="res://demo/demo_scene.gd" type="Script" id=3]
-[ext_resource path="res://demo/player/kinematic_player.tscn" type="PackedScene" id=4]
+[ext_resource path="res://demo/player/kinematic_player.tscn" type="PackedScene" id=6]
 
-[sub_resource type="RectangleShape2D" id=1]
-extents = Vector2( 32.1899, 31.7681 )
-
-[sub_resource type="CircleShape2D" id=2]
-radius = 9.31589
+[sub_resource type="RectangleShape2D" id=3]
+extents = Vector2( 72.0267, 28.5244 )
 
 [node name="DemoScene" type="Node"]
 script = ExtResource( 3 )
 
-[node name="ColorRect" type="ColorRect" parent="."]
-visible = false
-margin_left = 252.0
-margin_top = 135.0
-margin_right = 466.0
-margin_bottom = 391.0
-color = Color( 0.298039, 0.298039, 0.298039, 1 )
-__meta__ = {
-"_edit_use_anchors_": false
-}
-
-[node name="KinematicPlayer" parent="." instance=ExtResource( 4 )]
-position = Vector2( 327.239, 307.746 )
+[node name="KinematicPlayer2" parent="." instance=ExtResource( 6 )]
+position = Vector2( 238.103, 332.361 )
 
 [node name="StaticBody2D" type="StaticBody2D" parent="."]
-position = Vector2( 657.213, 330.807 )
+position = Vector2( 1116.2, 296.098 )
+rotation = -0.668461
 __meta__ = {
 "_edit_group_": true
 }
 
 [node name="icon" type="Sprite" parent="StaticBody2D"]
 modulate = Color( 0.52549, 1, 0, 1 )
+scale = Vector2( 2.33517, 1 )
 texture = ExtResource( 2 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
-shape = SubResource( 1 )
+shape = SubResource( 3 )
 
 [node name="Portal2D" parent="." instance=ExtResource( 1 )]
-position = Vector2( 601.86, 280.502 )
-rotation = 3.14159
+position = Vector2( 345.887, 336.476 )
 
 [node name="Portal2D2" parent="." instance=ExtResource( 1 )]
-position = Vector2( 463.452, 285.614 )
-
-[node name="RigidBody2D" type="RigidBody2D" parent="."]
-position = Vector2( 1132.19, 416.594 )
-collision_layer = 524289
-__meta__ = {
-"_edit_group_": true
-}
-
-[node name="Sprite" type="Sprite" parent="RigidBody2D"]
-scale = Vector2( 0.210134, 0.210134 )
-texture = ExtResource( 2 )
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="RigidBody2D"]
-shape = SubResource( 2 )
+position = Vector2( 144.608, 134.416 )
+rotation = 3.14159

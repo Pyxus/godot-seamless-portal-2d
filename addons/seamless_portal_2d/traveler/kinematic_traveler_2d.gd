@@ -21,9 +21,10 @@ onready var _teleport_clone: Sprite = Sprite.new()
 #optional built-in virtual _init method
 
 func _ready() -> void:
-	var material = ShaderMaterial.new()
-	material.shader = CLIP_SHADER
-	_teleport_clone.material = material
+	var clone_material := ShaderMaterial.new()
+	clone_material.shader = CLIP_SHADER
+	clone_material.set_shader_param("enabled", true)
+	_teleport_clone.material = clone_material
 
 func _to_string() -> String:
 	return "[%s:%s]" % [get_class(), get_instance_id()];
@@ -57,10 +58,16 @@ func _portal_system_entered() -> void:
 	_teleport_clone.set_as_toplevel(true)
 	add_child(_teleport_clone)
 	set_collision_layer_bit(19, true)
+	var material = _get_clip_material()
+	if material != null:
+		material.set_shader_param("enabled", true)
 
 func _portal_system_exited() -> void:
 	remove_child(_teleport_clone)
 	set_collision_layer_bit(19, false)
+	var material = _get_clip_material()
+	if material != null:
+		material.set_shader_param("enabled", false)
 
 func _get_clone_texture() -> Texture:
 	return null
@@ -83,7 +90,7 @@ func move_and_slide(linear_velocity: Vector2, up_direction: Vector2 = Vector2( 0
 """
 
 func teleport(to: Transform2D, direction: Vector2) -> void:
-	transform = to
+	global_transform = to
 
 func get_clone_texture() -> Texture:
 	return _get_clone_texture()

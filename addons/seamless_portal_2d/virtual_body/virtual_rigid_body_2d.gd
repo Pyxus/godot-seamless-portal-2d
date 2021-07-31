@@ -34,12 +34,22 @@ func _init(body: RigidBody2D) -> void:
 
 func _physics_process(delta: float) -> void:
 	if real_body != null:
-		#var linear_velocity: Vector2 = Physics2DServer.body_get_state(real_body.get_rid(), Physics2DServer.BODY_STATE_LINEAR_VELOCITY)
-		#var angular_velocity: float = Physics2DServer.body_get_state(real_body.get_rid(), Physics2DServer.BODY_STATE_ANGULAR_VELOCITY)
-		#linear_velocity = linear_velocity
-		#angular_velocity = angular_velocity
-		Physics2DServer.body_set_state(get_rid(), Physics2DServer.BODY_STATE_LINEAR_VELOCITY, real_body.linear_velocity)
-		Physics2DServer.body_set_state(get_rid(), Physics2DServer.BODY_STATE_ANGULAR_VELOCITY, real_body.angular_velocity)
+		angular_damp = real_body.angular_damp
+		angular_velocity = real_body.angular_velocity
+		applied_force = real_body.applied_force
+		applied_torque = real_body.applied_torque
+		friction = real_body.friction
+		gravity_scale = real_body.gravity_scale
+		inertia = real_body.inertia
+		linear_damp = real_body.linear_damp
+		linear_velocity = real_body.linear_velocity
+		mass = real_body.mass
+		mode = real_body.mode
+		physics_material_override = real_body.physics_material_override
+		sleeping = real_body.sleeping
+		weight = real_body.weight
+		#Physics2DServer.body_set_state(get_rid(), Physics2DServer.BODY_STATE_LINEAR_VELOCITY, real_body.linear_velocity)
+		#Physics2DServer.body_set_state(get_rid(), Physics2DServer.BODY_STATE_ANGULAR_VELOCITY, real_body.angular_velocity)
 
 #public methods
 

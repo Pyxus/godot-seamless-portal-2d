@@ -32,7 +32,11 @@ func _init(body: StaticBody2D) -> void:
 
 #built-in virtual _ready method
 
-#remaining built-in virtual methods
+func _physics_process(delta: float) -> void:
+	if real_body != null:
+		constant_linear_velocity = real_body.constant_linear_velocity
+		constant_angular_velocity = real_body.constant_angular_velocity
+		physics_material_override = real_body.physics_material_override
 
 #public method
 
